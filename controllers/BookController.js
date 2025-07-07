@@ -2,13 +2,24 @@ const Book = require("../models/Book");
 const { body, validationResult } = require("express-validator");
 
 exports.addBook = [
-  body('title').notEmpty().withMessage('Title is required'),
-  body('author').notEmpty().withMessage('Author is required'),
-  body('ISBN').notEmpty().withMessage('ISBN is required').isLength({ min: 13 }).withMessage('ISBN should be 13 characters long'),
-  body('genre').notEmpty().withMessage('Genre is required'),
-  body('publicationYear').isNumeric().withMessage('Publication Year must be a number').isLength({ min: 4, max: 4 }).withMessage('Year should be 4 digits'),
-  body('availabilityStatus').isIn(['available', 'unavailable']).withMessage('Availability status must be either available or unavailable'),
-  
+  body("title").notEmpty().withMessage("Title is required").trim(),
+  body("author").notEmpty().withMessage("Author is required").trim(),
+  body("ISBN")
+    .notEmpty()
+    .withMessage("ISBN is required")
+    .isLength({ min: 13, max: 13 })
+    .withMessage("ISBN should be exactly 13 characters")
+    .trim(),
+  body("genre").notEmpty().withMessage("Genre is required").trim(),
+  body("publicationYear")
+    .isNumeric()
+    .withMessage("Publication Year must be a number")
+    .isLength({ min: 4, max: 4 })
+    .withMessage("Year should be 4 digits"),
+  body("availabilityStatus")
+    .isIn(["available", "unavailable"])
+    .withMessage("Availability status must be either available or unavailable"),
+
   async (req, res) => {
     const { title, author, ISBN, genre, publicationYear, availabilityStatus } = req.body;
     const errors = validationResult(req);
@@ -17,19 +28,29 @@ exports.addBook = [
     }
 
     try {
-      const book = new Book({ title, author, ISBN, genre, publicationYear, availabilityStatus });
+      const book = new Book({
+        title: title.trim(),
+        author: author.trim(),
+        ISBN: ISBN.trim(),
+        genre: genre.trim(),
+        publicationYear,
+        availabilityStatus,
+      });
       await book.save();
       res.status(201).json({ message: "Book added successfully", book });
     } catch (error) {
       res.status(500).json({ message: "Error while adding the book", error: error.message });
     }
-  }
+  },
 ];
 
 exports.updateBook = async (req, res) => {
   const { id } = req.params;
   try {
-    const updatedBook = await Book.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+    const updatedBook = await Book.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
     if (!updatedBook) {
       return res.status(404).json({ message: "Book not found" });
     }
@@ -55,7 +76,7 @@ exports.viewBookById = async (req, res) => {
 exports.viewAllBooks = async (req, res) => {
   try {
     const books = await Book.find();
-    if (books.length === 0) {
+    if (!books.length) {
       return res.status(404).json({ message: "No books found" });
     }
     res.status(200).json({ message: "Books list fetched successfully", books });
@@ -82,10 +103,10 @@ exports.searchBooks = async (req, res) => {
   try {
     let query = {};
     if (term && filter) {
-      query[filter] = { $regex: term, $options: 'i' };
+      query[filter] = { $regex: term.trim(), $options: "i" };
     }
     const books = await Book.find(query);
-    if (books.length === 0) {
+    if (!books.length) {
       return res.status(404).json({ message: "No books found matching your search" });
     }
     res.status(200).json(books);

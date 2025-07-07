@@ -5,10 +5,12 @@ const bcrypt = require("bcrypt");
 exports.registerUser = async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    if (await User.findOne({ email })) return res.status(400).json({ message: "Email already in use" });
+    if (await User.findOne({ email })) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ name: name.trim(), email: email.toLowerCase(), password: hashedPassword });
     await newUser.save();
 
     res.status(201).json({ message: "User registered successfully", user: newUser });
@@ -20,20 +22,21 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) return res.status(400).json({ message: "Incorrect password" });
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
     res.status(200).json({
       message: "Login successful",
       token,
       user: {
         _id: user._id,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
@@ -56,7 +59,7 @@ exports.updateUserProfile = async (req, res) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { name, email },
+      { name: name?.trim(), email: email?.toLowerCase() },
       { new: true, runValidators: true }
     );
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
@@ -98,7 +101,7 @@ exports.deleteUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select("-password");
     res.status(200).json({ users });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });

@@ -7,29 +7,21 @@ exports.addReview = async (req, res) => {
 
   try {
     const book = await Book.findOne({ title }).populate("reviews");
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
     const user = await User.findById(userId);
-
-    if (!book) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const review = new Review({
       book: book._id,
       user: user._id,
       rating,
-      comment
+      comment: comment.trim()
     });
 
     await review.save();
 
-    if (!Array.isArray(book.reviews)) {
-      book.reviews = [];
-    }
-
+    if (!Array.isArray(book.reviews)) book.reviews = [];
     book.reviews.push(review._id);
     await book.save();
 
@@ -51,9 +43,7 @@ exports.getReviewsByBook = async (req, res) => {
       }
     });
 
-    if (!book) {
-      return res.status(404).json({ message: "Book not found" });
-    }
+    if (!book) return res.status(404).json({ message: "Book not found" });
 
     res.status(200).json(book.reviews);
   } catch (error) {
