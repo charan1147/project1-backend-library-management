@@ -11,14 +11,14 @@ exports.isAuthenticated = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // ✅ Fetch user from DB using id from token
-    const user = await User.findById(decoded._id || decoded.id); // Match your token field
+   
+    const user = await User.findById(decoded._id || decoded.id); 
 
     if (!user) {
       return res.status(401).json({ message: "Invalid user" });
     }
 
-    req.user = user; // ✅ Now you can access req.user._id, req.user.name, etc.
+    req.user = user; 
     next();
   } catch (error) {
     res.status(401).json({ message: "Token is not valid", error: error.message });
